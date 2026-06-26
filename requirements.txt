@@ -1,0 +1,17 @@
+
+fastapi
+uvicorn
+python-multipart
+vosk
+librosa
+soundfile
+noisereduce
+pydub
+faster-whisper
+torch
+numpy
+scipy
+tqdm
+transformers
+uvicorn[standard]
+python-multipart
