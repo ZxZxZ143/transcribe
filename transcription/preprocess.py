@@ -5,9 +5,9 @@ import re
 from pathlib import Path
 from typing import Any
 
-DEFAULT_INPUT_JSON = Path("data/transcripts/transcripts.json")
-DEFAULT_OUTPUT_JSON = Path("data/preprocessed/preprocessed.json")
-DEFAULT_REVIEW_CSV = Path("data/preprocessed/review_preprocessed_transcripts.csv")
+DEFAULT_INPUT_JSON = Path("../data/transcripts/transcripts.json")
+DEFAULT_OUTPUT_JSON = Path("../data/preprocessed/preprocessed.json")
+DEFAULT_REVIEW_CSV = Path("../data/preprocessed/review_preprocessed_transcripts.csv")
 
 LOW_CONFIDENCE_THRESHOLD = 0.75
 VERY_SHORT_CALL_WORDS = 5
@@ -19,6 +19,88 @@ HIGH_LOW_CONFIDENCE_WORD_RATIO = 0.30
 MAX_EXPORTED_CONFIDENCE_WORDS = 30
 MIN_LOW_CONFIDENCE_NOISE_WORD_LEN = 4
 REMOVE_LOW_CONFIDENCE_NOISE_WORDS = False
+
+SEMANTIC_MAX_KEYWORDS = 6
+SEMANTIC_MAX_SEGMENTS = 4
+SEMANTIC_MAX_WORDS = 55
+SEMANTIC_CONTEXT_BEFORE = 7
+SEMANTIC_CONTEXT_AFTER = 18
+
+SEMANTIC_GENERIC_KEYWORDS = {
+    "банк", "банка", "система", "номер", "телефон",
+    "работает", "рабочее время", "сегодня", "завтра",
+    "бүгін", "ертең", "қалай", "қайда", "қашан",
+    "сұрақ", "қай жерден", "күндері", "жерден",
+    "хабарласып", "можно", "нужно", "надо",
+    "подскажите", "пожалуйста", "спасибо",
+    "жақсы", "рахмет", "рақмет",
+}
+
+SEMANTIC_WEAK_KEYWORDS = {
+    "деньги", "ақша", "счет", "счёт", "шот",
+    "карта", "карту", "карточка", "кредит", "несие",
+    "код", "смс", "оплата", "платеж", "платёж", "төлем",
+}
+
+SEMANTIC_STRONG_KEYWORDS = {
+    "не могу войти", "не могу зайти", "зайти не могу",
+    "неверный логин", "неверный пароль", "восстановить пароль",
+    "сбросить пароль", "заблокирован аккаунт",
+    "логин ұмыттым", "пароль ұмыттым", "кіре алмай жатырмын",
+    "аккаунтқа кіре алмай тұрмын",
+
+    "не приходит смс", "не приходит код",
+    "неправильный код подтверждения", "код просрочен",
+    "приложение не открывается", "приложение вылетает",
+    "қосымша ашылмайды", "смс келмей жатыр", "код келмеді",
+
+    "превышен лимит", "превышен лимит по карте",
+    "лимит на переводы", "карта заблокирована",
+    "заблокировали карту", "разблокировать карту",
+    "банкомат не выдал деньги", "банкомат зажевал карту",
+    "лимит асып кетті", "карта бұғатталды",
+    "банкомат ақша бермеді",
+
+    "не могу отправить перевод", "перевод не уходит",
+    "перевод завис", "не зачислились деньги",
+    "не дошли деньги", "деньги не пришли",
+    "платеж не прошел", "платёж не прошёл",
+    "двойное списание", "списали дважды",
+    "ақша түскен жоқ", "аударым өтпей жатыр", "төлем өтпеді",
+
+    "досрочное погашение", "частичное досрочное",
+    "не могу погасить кредит", "просроченная задолженность",
+    "отсрочка платежа", "кредитные каникулы",
+    "реструктуризация долга", "арест счета",
+    "исполнительный лист", "удержания из зарплаты",
+    "несие төлей алмаймын", "мерзімі өткен берешек",
+    "төлем кестесі", "кредиттік демалыс",
+
+    "звонили мошенники", "украли деньги",
+    "несанкционированное списание", "не совершал эту операцию",
+    "заблокируйте карту срочно", "алаяқтар хабарласты",
+    "ақша ұрланды", "мен жасамаған операция",
+
+    "отделение", "рабочее время", "суббота", "воскресенье",
+    "бөлімше қайда", "жұмыс уақыты қандай", "сенбі күні ашық па",
+}
+
+SEMANTIC_KEYWORD_NORMALIZATION = {
+    "счёт": "счет",
+    "счет": "счет",
+    "платёж": "платеж",
+    "платеж": "платеж",
+    "карточка": "карта",
+    "карту": "карта",
+    "карта": "карта",
+    "кредитов": "кредит",
+    "смс": "смс код",
+    "код": "код",
+    "ақша": "ақша",
+    "шот": "шот",
+    "төлем": "төлем",
+    "несие": "несие",
+}
 
 BOILERPLATE_PATTERNS: list[tuple[str, str]] = [
     (r"\bуведомляем\s+о\s+записи\s+разговора\b", "recording_notice_ru"),
@@ -84,6 +166,14 @@ ASR_GARBAGE_PATTERNS: list[tuple[str, str]] = [
     (r"\bбербок\s+шоу\b", "asr_noise"),
     (r"\bгейминатор\b", "asr_noise"),
     (r"\bвидео\s+пробирка", "asr_video_check_noise"),
+    (r"\bбанк\s+рыбака\b", "asr_bank_name_noise"),
+    (r"\bбанка\s+рыбы\s*камня\b", "asr_bank_name_noise"),
+    (r"\bбанкир\s+бык\b", "asr_bank_name_noise"),
+    (r"\bбаггер\s+бы\b", "asr_noise"),
+    (r"\bзеленскийге\b", "asr_noise"),
+    (r"\bвключайте\s+бизнес\s+на\s+полную\b", "promo_noise"),
+    (r"\bгорячее\s+предложение\b", "promo_noise"),
+    (r"\bкомисси[яю]\s+берем\s+на\s+себя\b", "promo_noise"),
 ]
 
 PROBLEM_KEYWORDS_RU = [
@@ -1102,8 +1192,6 @@ def clean_segments(
 
         segment_result = {
             "index": index,
-            "start": segment.get("start"),
-            "end": segment.get("end"),
             "raw_text": raw_text,
             "cleaned_text": cleaned["cleaned_text"],
             "removed_parts": cleaned["removed_parts"],
@@ -1161,6 +1249,267 @@ def extract_problem_keywords(text: str) -> list[str]:
 
     return sorted(set(found))
 
+
+def unique_preserve_order(values: list[str]) -> list[str]:
+    seen = set()
+    result = []
+
+    for value in values:
+        value = normalize_text(value)
+
+        if not value or value in seen:
+            continue
+
+        seen.add(value)
+        result.append(value)
+
+    return result
+
+
+def normalize_semantic_keyword(keyword: str) -> str:
+    keyword = normalize_text(keyword)
+
+    if not keyword:
+        return ""
+
+    return SEMANTIC_KEYWORD_NORMALIZATION.get(keyword, keyword)
+
+
+def is_generic_semantic_keyword(keyword: str) -> bool:
+    keyword = normalize_text(keyword)
+
+    if not keyword:
+        return True
+
+    if keyword in SEMANTIC_GENERIC_KEYWORDS:
+        return True
+
+    if keyword in SEMANTIC_WEAK_KEYWORDS:
+        return True
+
+    return False
+
+
+def score_semantic_keyword(keyword: str) -> int:
+    keyword = normalize_text(keyword)
+
+    if not keyword:
+        return 0
+
+    score = 0
+    words = keyword.split()
+
+    if keyword in SEMANTIC_STRONG_KEYWORDS:
+        score += 100
+
+    if len(words) >= 3:
+        score += 40
+    elif len(words) == 2:
+        score += 20
+
+    problem_markers = [
+        "не могу", "не получается", "не работает", "не проходит",
+        "не приходит", "заблок", "превышен", "просроч", "досроч",
+        "удержан", "списал", "завис", "ошибка", "ұстал",
+        "өтпей", "келм", "түскен жоқ", "бұғат", "берешек",
+        "төлей алмай",
+    ]
+
+    if any(marker in keyword for marker in problem_markers):
+        score += 30
+
+    score += min(len(keyword), 30)
+    return score
+
+
+def filter_semantic_keywords(problem_keywords: list[str]) -> list[str]:
+    scored_keywords = []
+
+    for keyword in problem_keywords:
+        keyword = normalize_semantic_keyword(keyword)
+
+        if not keyword:
+            continue
+
+        if len(keyword) < 3:
+            continue
+
+        if is_generic_semantic_keyword(keyword):
+            continue
+
+        score = score_semantic_keyword(keyword)
+        if score <= 0:
+            continue
+
+        scored_keywords.append((score, keyword))
+
+    scored_keywords.sort(key=lambda item: (-item[0], item[1]))
+
+    ordered_keywords = []
+    for _, keyword in scored_keywords:
+        ordered_keywords.append(keyword)
+
+    return unique_preserve_order(ordered_keywords)[:SEMANTIC_MAX_KEYWORDS]
+
+
+def remove_semantic_noise(text: str) -> str:
+    text = normalize_text(text)
+
+    if not text:
+        return ""
+
+    noise_patterns = [
+        r"\bбанк\s+рыбака\b",
+        r"\bбанка\s+рыбы\s*камня\b",
+        r"\bбанкир\s+бык\b",
+        r"\bдоктор\s+быка\b",
+        r"\bсэр\s+быка\b",
+        r"\bбаггер\s+бы\b",
+        r"\bзеленскийге\b",
+        r"\bвключайте\s+бизнес\s+на\s+полную\b",
+        r"\bгорячее\s+предложение\b",
+        r"\bкомисси[яю]\s+берем\s+на\s+себя\b",
+    ]
+
+    for pattern in noise_patterns:
+        text = re.sub(pattern, " ", text, flags=re.IGNORECASE)
+
+    generic_phrases = sorted(SEMANTIC_GENERIC_KEYWORDS, key=len, reverse=True)
+
+    for phrase in generic_phrases:
+        phrase = normalize_text(phrase)
+
+        if not phrase:
+            continue
+
+        text = re.sub(rf"\b{re.escape(phrase)}\b", " ", text, flags=re.IGNORECASE)
+
+    text = re.sub(r"\s+", " ", text).strip()
+    return text
+
+
+def text_has_semantic_keyword(text: str, semantic_keywords: list[str]) -> bool:
+    text = normalize_text(text)
+
+    if not text:
+        return False
+
+    return any(keyword in text for keyword in semantic_keywords)
+
+
+def trim_words(text: str, max_words: int = SEMANTIC_MAX_WORDS) -> str:
+    text = normalize_text(text)
+    words = text.split()
+
+    if len(words) <= max_words:
+        return text
+
+    return " ".join(words[:max_words])
+
+
+def extract_keyword_windows(
+    text: str,
+    semantic_keywords: list[str],
+    context_before: int = SEMANTIC_CONTEXT_BEFORE,
+    context_after: int = SEMANTIC_CONTEXT_AFTER,
+    max_windows: int = SEMANTIC_MAX_SEGMENTS,
+) -> list[str]:
+    text = remove_semantic_noise(text)
+
+    if not text or not semantic_keywords:
+        return []
+
+    words = text.split()
+    windows = []
+    used_ranges: list[tuple[int, int]] = []
+
+    keyword_variants = sorted(semantic_keywords, key=lambda value: len(value.split()), reverse=True)
+
+    for keyword in keyword_variants:
+        keyword_words = keyword.split()
+        keyword_len = len(keyword_words)
+
+        if keyword_len == 0:
+            continue
+
+        for index in range(0, len(words) - keyword_len + 1):
+            if words[index:index + keyword_len] != keyword_words:
+                continue
+
+            start = max(0, index - context_before)
+            end = min(len(words), index + keyword_len + context_after)
+
+            overlaps = any(not (end <= old_start or start >= old_end) for old_start, old_end in used_ranges)
+            if overlaps:
+                continue
+
+            used_ranges.append((start, end))
+            windows.append(" ".join(words[start:end]))
+
+            if len(windows) >= max_windows:
+                return windows
+
+    return windows
+
+
+def build_semantic_text(
+    cleaned_transcript: str,
+    problem_keywords: list[str] | None = None,
+    segments_cleaned: list[dict[str, Any]] | None = None,
+) -> str:
+    """
+    Собирает короткое смысловое поле для embeddings/кластеризации.
+
+    В semantic_text не добавляются слишком общие слова вроде "банк", "номер",
+    "телефон", "қалай", "сегодня". Приоритет отдаётся конкретным фразам,
+    которые описывают проблему: "не могу войти", "превышен лимит",
+    "досрочное погашение", "смс келмеді", "карта бұғатталды" и т.п.
+    """
+    cleaned_transcript = remove_semantic_noise(cleaned_transcript)
+
+    if not cleaned_transcript:
+        return ""
+
+    problem_keywords = problem_keywords or []
+    semantic_keywords = filter_semantic_keywords(problem_keywords)
+
+    selected_parts = []
+
+    if segments_cleaned and semantic_keywords:
+        for segment in segments_cleaned:
+            segment_text = remove_semantic_noise(str(segment.get("cleaned_text", "")))
+
+            if not segment_text:
+                continue
+
+            if text_has_semantic_keyword(segment_text, semantic_keywords):
+                windows = extract_keyword_windows(segment_text, semantic_keywords)
+
+                if windows:
+                    selected_parts.extend(windows)
+                else:
+                    selected_parts.append(segment_text)
+
+            if len(selected_parts) >= SEMANTIC_MAX_SEGMENTS:
+                break
+
+    if not selected_parts and semantic_keywords:
+        selected_parts = extract_keyword_windows(cleaned_transcript, semantic_keywords)
+
+    if not selected_parts:
+        selected_parts.append(cleaned_transcript)
+
+    semantic_body = normalize_text(" ".join(unique_preserve_order(selected_parts)))
+    semantic_body = remove_semantic_noise(semantic_body)
+    semantic_body = trim_words(semantic_body, SEMANTIC_MAX_WORDS)
+
+    if semantic_keywords:
+        semantic_text = " ".join(semantic_keywords + [semantic_body])
+    else:
+        semantic_text = semantic_body
+
+    semantic_text = remove_semantic_noise(semantic_text)
+    return trim_words(semantic_text, SEMANTIC_MAX_WORDS)
 
 
 def get_language_code(item: dict[str, Any]) -> str | None:
@@ -1414,18 +1763,20 @@ def process_item(item: dict[str, Any]) -> dict[str, Any]:
             "error": item.get("error"),
             "raw_transcript": "",
             "cleaned_transcript": "",
+            "semantic_text": "",
             "selected_language": selected_language,
             "language_confidence": language_confidence,
             "is_empty_call": True,
             "empty_reason": "transcription_error",
             "quality_flags": ["transcription_error"],
-            "word_confidence_stats": {},
             "review_priority": "high",
             "ready_for_classification": False,
         }
 
-    word_confidence_stats = analyze_word_confidences(item)
-    cleaned = build_cleaned_transcript(item, word_confidence_stats)
+    # Тайминги и word-level confidence не нужны для кластеризации и классификации.
+    # Поэтому в preprocessing output мы их больше не сохраняем.
+    word_confidence_stats: dict[str, Any] = {}
+    cleaned = build_cleaned_transcript(item, None)
     cleaned_transcript = cleaned["cleaned_transcript"]
 
     removed_parts = []
@@ -1459,6 +1810,13 @@ def process_item(item: dict[str, Any]) -> dict[str, Any]:
         cleaned["word_count_cleaned"],
     )
 
+    problem_keywords_found = extract_problem_keywords(cleaned_transcript)
+    semantic_text = build_semantic_text(
+        cleaned_transcript=cleaned_transcript,
+        problem_keywords=problem_keywords_found,
+        segments_cleaned=cleaned["segments_cleaned"],
+    )
+
     return {
         "file_name": item.get("file_name"),
         "file_path": item.get("file_path"),
@@ -1468,6 +1826,7 @@ def process_item(item: dict[str, Any]) -> dict[str, Any]:
 
         "raw_transcript": item.get("text", ""),
         "cleaned_transcript": cleaned_transcript,
+        "semantic_text": semantic_text,
 
         "is_empty_call": cleaned["is_empty_call"],
         "empty_reason": cleaned["empty_reason"],
@@ -1483,10 +1842,9 @@ def process_item(item: dict[str, Any]) -> dict[str, Any]:
         "transcription_time_seconds": item.get("transcription_time_seconds"),
         "total_time_with_detection_seconds": item.get("total_time_with_detection_seconds"),
 
-        "problem_keywords_found": extract_problem_keywords(cleaned_transcript),
+        "problem_keywords_found": problem_keywords_found,
         "removed_parts": sorted(set(removed_parts)),
         "quality_flags": quality_flags,
-        "word_confidence_stats": word_confidence_stats,
 
         "segments_cleaned": cleaned["segments_cleaned"],
         "segments_removed": cleaned["segments_removed"],
@@ -1508,15 +1866,8 @@ def save_review_csv(results: list[dict[str, Any]], output_csv: Path) -> None:
         "word_count_cleaned",
         "cleaning_ratio",
         "avg_confidence",
-        "total_words_with_confidence",
-        "low_confidence_words_count",
-        "very_low_confidence_words_count",
-        "low_confidence_words_ratio",
-        "low_confidence_important_words",
-        "very_low_confidence_words",
-        "candidate_low_confidence_noise_words",
-        "removed_low_confidence_words",
         "problem_keywords_found",
+        "semantic_text",
         "removed_parts",
         "raw_transcript",
         "cleaned_transcript",
@@ -1527,8 +1878,6 @@ def save_review_csv(results: list[dict[str, Any]], output_csv: Path) -> None:
         writer.writeheader()
 
         for item in results:
-            stats = item.get("word_confidence_stats", {}) or {}
-
             writer.writerow({
                 "file_name": item.get("file_name"),
                 "selected_language": item.get("selected_language"),
@@ -1542,15 +1891,8 @@ def save_review_csv(results: list[dict[str, Any]], output_csv: Path) -> None:
                 "word_count_cleaned": item.get("word_count_cleaned"),
                 "cleaning_ratio": item.get("cleaning_ratio"),
                 "avg_confidence": item.get("avg_confidence"),
-                "total_words_with_confidence": stats.get("total_words_with_confidence"),
-                "low_confidence_words_count": stats.get("low_confidence_words_count"),
-                "very_low_confidence_words_count": stats.get("very_low_confidence_words_count"),
-                "low_confidence_words_ratio": stats.get("low_confidence_words_ratio"),
-                "low_confidence_important_words": format_confidence_words(stats.get("low_confidence_important_words", [])),
-                "very_low_confidence_words": format_confidence_words(stats.get("very_low_confidence_words", [])),
-                "candidate_low_confidence_noise_words": format_confidence_words(stats.get("removable_low_confidence_noise_words", [])),
-                "removed_low_confidence_words": format_confidence_words(stats.get("removed_low_confidence_words", [])),
                 "problem_keywords_found": ", ".join(item.get("problem_keywords_found", [])),
+                "semantic_text": item.get("semantic_text", ""),
                 "removed_parts": ", ".join(item.get("removed_parts", [])),
                 "raw_transcript": item.get("raw_transcript", ""),
                 "cleaned_transcript": item.get("cleaned_transcript", ""),
@@ -1586,13 +1928,14 @@ def build_summary(processed_results: list[dict[str, Any]]) -> dict[str, Any]:
 def build_many_output(input_json: Path, processed_results: list[dict[str, Any]]) -> dict[str, Any]:
     return {
         "source_file": str(input_json),
-        "preprocessing_type": "rule_based_minimal_v6_dual_input",
+        "preprocessing_type": "rule_based_minimal_v7_semantic_problem_focus",
         "input_mode": "many_transcripts",
         "notes": [
             "raw_transcript не перезаписывается",
-            "cleaned_transcript собирается из очищенных сегментов с таймингами",
-            "очистка консервативная: удаляется технический мусор, но смысловые проблемы остаются",
-            "word-level confidence используется для quality flags и очень осторожного удаления низкоуверенного мусора",
+            "cleaned_transcript собирается из очищенных сегментов без сохранения таймингов",
+            "semantic_text собирает короткое смысловое поле для embeddings и кластеризации",
+            "semantic_text жёстко убирает общие слова и оставляет фрагменты вокруг конкретной проблемы клиента",
+            "word-level timestamps и word-level confidence не сохраняются в preprocessing output, потому что для кластеризации они не нужны",
         ],
         "summary": build_summary(processed_results),
         "results": processed_results,
@@ -1641,7 +1984,7 @@ def preprocess_single_transcript_file(
     processed_item = process_item(source_data)
     output_data = {
         "source_file": str(input_json),
-        "preprocessing_type": "rule_based_minimal_v6_dual_input",
+        "preprocessing_type": "rule_based_minimal_v7_semantic_problem_focus",
         "input_mode": "single_transcript",
         "result": processed_item,
     }
@@ -1693,7 +2036,7 @@ def preprocess_file(
         processed_item = process_item(source_data)
         output_data = {
             "source_file": str(input_json),
-            "preprocessing_type": "rule_based_minimal_v6_dual_input",
+            "preprocessing_type": "rule_based_minimal_v7_semantic_problem_focus",
             "input_mode": "single_transcript",
             "result": processed_item,
         }

@@ -15,3 +15,8 @@ tqdm
 transformers
 uvicorn[standard]
 python-multipart
+sentence-transformers
+pandas
+numpy
+hdbscan
+scikit-learn

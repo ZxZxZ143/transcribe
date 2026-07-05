@@ -11,17 +11,17 @@
     <section class="hero">
       <div>
         <h1>Audio Transcription Pipeline</h1>
-        <p>Загрузка аудио, транскрибация, предобработка и выгрузка итогового CSV.</p>
+        <p>Загрузка аудио, транскрибация, предобработка, кластеризация и выгрузка итогового CSV.</p>
       </div>
 
-      <button id="downloadCsvButton" class="secondary-button">
-        Скачать CSV
-      </button>
+      <div class="hero-actions">
+        <button id="clusterButton" class="primary-button">Сделать кластеризацию</button>
+        <button id="downloadCsvButton" class="secondary-button">Скачать CSV</button>
+      </div>
     </section>
 
     <section class="card">
       <h2>Загрузка файлов</h2>
-
       <div class="upload-box">
         <input
           id="fileInput"
@@ -29,12 +29,8 @@
           multiple
           accept=".wav,.mp3,.m4a,.mp4,.ogg,.flac,.aac,.wma,.webm,.opus,.aiff,.aif"
         />
-
-        <button id="uploadButton" class="primary-button">
-          Загрузить и обработать
-        </button>
+        <button id="uploadButton" class="primary-button">Загрузить и обработать</button>
       </div>
-
       <div id="statusMessage" class="status-message"></div>
     </section>
 
@@ -44,45 +40,69 @@
           <h2>Результаты</h2>
           <p id="resultsInfo">Последние обработанные файлы</p>
         </div>
-
         <div class="actions">
-          <button id="refreshButton" class="secondary-button">
-            Обновить
-          </button>
-
-          <button id="clearButton" class="danger-button">
-            Очистить
-          </button>
+          <button id="refreshButton" class="secondary-button">Обновить</button>
+          <button id="clearButton" class="danger-button">Очистить</button>
         </div>
       </div>
 
-      <div class="table-wrapper">
-        <table>
-          <thead>
-            <tr>
-              <th>Файл</th>
-              <th>Статус</th>
-              <th>Язык</th>
-              <th>Уверенность</th>
-              <th>Слов raw</th>
-              <th>Слов clean</th>
-              <th>Review</th>
-              <th>Ready</th>
-              <th>Очищенный текст</th>
-            </tr>
-          </thead>
+      <div class="tabs">
+        <button class="tab-button active" data-tab="transcripts">Транскрипты</button>
+        <button class="tab-button" data-tab="clusters">Кластеры</button>
+      </div>
 
-          <tbody id="resultsTableBody">
-            <tr>
-              <td colspan="9" class="empty-cell">
-                Пока нет данных
-              </td>
-            </tr>
-          </tbody>
-        </table>
+      <div id="transcriptsTab" class="tab-panel active">
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Файл</th>
+                <th>Статус</th>
+                <th>Язык</th>
+                <th>Уверенность</th>
+                <th>Слов raw</th>
+                <th>Слов clean</th>
+                <th>Review</th>
+                <th>Ready</th>
+                <th>Очищенный текст</th>
+              </tr>
+            </thead>
+            <tbody id="resultsTableBody">
+              <tr><td colspan="9" class="empty-cell">Пока нет данных</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div id="clustersTab" class="tab-panel">
+        <div class="cluster-toolbar">
+          <div>
+            <h3>Результаты кластеризации</h3>
+            <p id="clustersInfo">Кластеризация ещё не запускалась</p>
+          </div>
+          <button id="refreshClustersButton" class="secondary-button">Обновить кластеры</button>
+        </div>
+
+        <div id="clustersBoard" class="clusters-board">
+          <div class="empty-clusters">Пока нет данных кластеризации</div>
+        </div>
       </div>
     </section>
   </main>
+
+  <div id="clusterModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-backdrop" data-modal-close></div>
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="clusterModalTitle">
+      <div class="modal-header">
+        <div>
+          <h3 id="clusterModalTitle">Детали аудио</h3>
+          <p id="clusterModalSubtitle"></p>
+        </div>
+        <button id="closeClusterModalButton" class="modal-close" aria-label="Закрыть">×</button>
+      </div>
+      <div id="clusterModalBody" class="modal-body"></div>
+    </div>
+  </div>
 
   <script src="/static/app.js"></script>
 </body>

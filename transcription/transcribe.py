@@ -9,14 +9,20 @@ from typing import Any
 
 from vosk import KaldiRecognizer, Model, SetLogLevel
 
-RAW_DIR = Path("data/raw")
-OUTPUT_DIR = Path("data/transcripts")
+SCRIPT_DIR = Path(__file__).resolve().parent
+PROJECT_ROOT = SCRIPT_DIR.parent
+
+DATA_DIR = PROJECT_ROOT / "data"
+MODELS_DIR = PROJECT_ROOT / "models"
+
+RAW_DIR = DATA_DIR / "raw"
+OUTPUT_DIR = DATA_DIR / "transcripts"
 OUTPUT_JSON = OUTPUT_DIR / "transcripts.json"
 
-RU_DETECT_MODEL_PATH = Path("models/vosk-model-small-ru-0.22")
-KK_DETECT_MODEL_PATH = Path("models/vosk-model-small-kz-0.42")
-RU_TRANSCRIBE_MODEL_PATH = Path("models/vosk-model-ru-0.42")
-KK_TRANSCRIBE_MODEL_PATH = Path("models/vosk-model-kz-0.42")
+RU_DETECT_MODEL_PATH = MODELS_DIR / "vosk-model-small-ru-0.22"
+KK_DETECT_MODEL_PATH = MODELS_DIR / "vosk-model-small-kz-0.42"
+RU_TRANSCRIBE_MODEL_PATH = MODELS_DIR / "vosk-model-ru-0.42"
+KK_TRANSCRIBE_MODEL_PATH = MODELS_DIR / "vosk-model-kz-0.42"
 
 SAMPLE_RATE = 16000
 BYTES_PER_SAMPLE = 2
@@ -40,7 +46,7 @@ RUN_SHORT_RECHECK_ON_WEAK_KK = True
 RUN_FULL_DOUBLE_CHECK_ON_LOW_CONFIDENCE = False
 DEFAULT_LANGUAGE_ON_UNKNOWN = "ru"
 SAVE_WORDS = True
-DETECTION_WORD_TIMESTAMPS = True
+DETECTION_WORD_TIMESTAMPS = False
 
 AUDIO_EXTENSIONS = {
     ".wav", ".mp3", ".m4a", ".mp4", ".ogg",
